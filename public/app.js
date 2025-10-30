@@ -18,7 +18,7 @@ const els = {
 
 const state = { sinEnt: null, zipEnt: null };
 
-// ===== Segurança leve: bloquear copy/paste e seleção geral
+// ===== copy/paste 
 (function hardenCopy(){
   function isAllowedTarget(t){
     return t.closest(".allow-copy") || t.tagName === "INPUT" || t.tagName === "TEXTAREA";
@@ -26,7 +26,7 @@ const state = { sinEnt: null, zipEnt: null };
   ["copy","cut","paste","contextmenu"].forEach(evt=>{
     document.addEventListener(evt,(e)=>{ if(!isAllowedTarget(e.target)) e.preventDefault(); },{capture:true});
   });
-  // bloquear seleção por teclado
+  // block de seleção por idade
   document.addEventListener("keydown",(e)=>{
     const k=e.key.toLowerCase();
     const ctrl=e.ctrlKey||e.metaKey;
@@ -34,7 +34,7 @@ const state = { sinEnt: null, zipEnt: null };
       if(!isAllowedTarget(e.target)) e.preventDefault();
     }
   },{capture:true});
-  // impedir arrastar seleção
+  // block de seleção
   document.addEventListener("selectstart",(e)=>{ if(!isAllowedTarget(e.target)) e.preventDefault(); },{capture:true});
 })();
 
@@ -53,7 +53,7 @@ const toBrDate=(s)=>{
 const brMon=(n)=>(n??0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
 const cnpjMask=(c)=>{const s=onlyDigits(c).padStart(14,"0");return `${s.slice(0,2)}.${s.slice(2,5)}.${s.slice(5,8)}/${s.slice(8,12)}-${s.slice(12,14)}`;};
 
-// ripple pos para .btn-press
+// ripple .btn-press
 document.addEventListener("pointerdown",(e)=>{
   const b=e.target.closest(".btn-press");
   if(!b) return;
@@ -62,7 +62,7 @@ document.addEventListener("pointerdown",(e)=>{
   b.style.setProperty("--y", `${e.clientY - r.top }px`);
 });
 
-// ===== SINTEGRA parser (essenciais R10 e R50)
+// ===== SINTEGRA parser (R10 e R50)
 function parseSintegra(text){
   const lines=text.split(/\r?\n/).filter(l=>l.trim().length>0);
   const byType=new Map(); const push=(t,o)=>{ if(!byType.has(t)) byType.set(t,{items:[]}); byType.get(t).items.push(o); };
@@ -106,7 +106,7 @@ function extractFromXMLString(xml){
   return { Modelo:mod, Serie:serie, NumeroOriginal:nNF, Numero:norm6(nNF), Valor:vNF, DataEmissao:data, EmitCNPJ:emit, DestCNPJ:dest, Chave:chave };
 }
 
-// ===== Resumo simples (R50)
+// ===== Resumo (R50)
 function resumoSintegra(result){
   const r10=result.byType.get("10")?.items?.[0];
   const empresa=r10?`${r10.Razao||""} • CNPJ ${cnpjMask(r10.CNPJ||"")} • ${r10.Mun||""}/${r10.UF||""}`:"";
@@ -132,7 +132,7 @@ function renderTopo(sum){
   ].join("");
 }
 
-// ===== Upload handlers + animação dropzone
+// ===== helpers upload/zona de drop de arquivos
 function bindDropArea(area, input){
   ;["dragenter","dragover"].forEach(ev=>area.addEventListener(ev,(e)=>{e.preventDefault();area.classList.add("active");}));
   ;["dragleave","drop"].forEach(ev=>area.addEventListener(ev,(e)=>{e.preventDefault();area.classList.remove("active");}));
@@ -182,7 +182,7 @@ els.zipEntradas.onchange=async(e)=>{
   tryCompareEntradas();
 };
 
-// ===== Comparação Entradas
+// ===== comparador
 function tryCompareEntradas(){
   if(!state.sinEnt || !state.zipEnt) return;
   const r50=state.sinEnt.byType.get("50")?.items||[];
@@ -215,7 +215,7 @@ function tryCompareEntradas(){
   els.tbOnlyXmlEnt.innerHTML=onlyXML.map((r,i)=>`<tr><td>${i+1}</td><td>${r.Numero}</td><td>${r.DataEmissao}</td><td>${brMon(r.Valor)}</td><td>${r.Chave||""}</td><td>${r.Produto||""}</td></tr>`).join("");
   els.tbCommonEnt.innerHTML=common.map((r,i)=>`<tr><td>${i+1}</td><td>${r.Numero}</td><td>${r.DataXML}</td><td>${r.DataS}</td><td>${brMon(r.vXML)}</td><td>${brMon(r.vS)}</td></tr>`).join("");
 
-  // resumo rápido no topo
+  // resumo topo
   const totS=entradas.reduce((s,n)=>s+(n.VTotal||0),0);
   const totXML=(rows||[]).reduce((s,r)=>s+(r.Valor||0),0);
   const res = [
@@ -228,7 +228,7 @@ function tryCompareEntradas(){
   showToast("Entradas comparadas");
 }
 
-// ===== Relatórios
+// ===== relatorios
 els.btnOpenReport.onclick=()=>{
   els.reportName.value = "RELATORIO DE COMPARACAO ENTRADAS";
   els.modal.classList.remove("hidden");
@@ -270,14 +270,14 @@ function exportPDF_Entradas(name){
   y=doc.lastAutoTable.finalY+18;
 
   const onlyRows=Array.from(els.tbOnlyXmlEnt.querySelectorAll("tr")).map(tr=>Array.from(tr.children).map(td=>td.textContent));
-  doc.autoTable({ startY:y, head:[["#","Número","Data Emissão","Valor","Chave","Produto"]], body:onlyRows,
+  doc.autoTable({ startY:y, head:[["Qnt.","Número","Data Emissão","Valor","Chave","Produto"]], body:onlyRows,
     styles:{fontSize:8,lineColor:[220,220,220],lineWidth:.2}, headStyles:{fillColor:[240,240,240],textColor:[30,30,30]},
     theme:"grid", margin:{left:24,right:24}
   });
   y=doc.lastAutoTable.finalY+18;
 
   const commonRows=Array.from(els.tbCommonEnt.querySelectorAll("tr")).map(tr=>Array.from(tr.children).map(td=>td.textContent));
-  doc.autoTable({ startY:y, head:[["#","Número 6 dígitos","Data Emissão XML","Data Emissão SINTEGRA","Valor XML","Valor SINTEGRA"]], body:commonRows,
+  doc.autoTable({ startY:y, head:[["Qnt.","Número 6 dígitos","Data Emissão XML","Data Emissão SINTEGRA","Valor XML","Valor SINTEGRA"]], body:commonRows,
     styles:{fontSize:8,lineColor:[220,220,220],lineWidth:.2}, headStyles:{fillColor:[240,240,240],textColor:[30,30,30]},
     theme:"grid", margin:{left:24,right:24}
   });
@@ -294,11 +294,11 @@ function setAutoWidths(ws, rows){
 function exportXLSX_Entradas(name){
   const wb=XLSX.utils.book_new();
 
-  const onlyRows=[["#","Número","Data Emissão","Valor","Chave","Produto"]];
+  const onlyRows=[["Qnt.","Número","Data Emissão","Valor","Chave","Produto"]];
   onlyRows.push(...Array.from(els.tbOnlyXmlEnt.querySelectorAll("tr")).map(tr=>Array.from(tr.children).map(td=>td.textContent)));
   const ws1=XLSX.utils.aoa_to_sheet(onlyRows); setAutoWidths(ws1,onlyRows); XLSX.utils.book_append_sheet(wb, ws1, "NOTAS NÃO LANÇADAS");
 
-  const commonRows=[["#","Número 6 dígitos","Data Emissão XML","Data Emissão SINTEGRA","Valor XML","Valor SINTEGRA"]];
+  const commonRows=[["Qnt","Número 6 dígitos","Data Emissão XML","Data Emissão SINTEGRA","Valor XML","Valor SINTEGRA"]];
   commonRows.push(...Array.from(els.tbCommonEnt.querySelectorAll("tr")).map(tr=>Array.from(tr.children).map(td=>td.textContent)));
   const ws2=XLSX.utils.aoa_to_sheet(commonRows); setAutoWidths(ws2,commonRows); XLSX.utils.book_append_sheet(wb, ws2, "Notas em comum");
 
@@ -313,7 +313,7 @@ function exportXLSX_Entradas(name){
   XLSX.writeFile(wb, `${name}.xlsx`);
 }
 
-// ===== Inicial
+// ===== inicio
 window.addEventListener("DOMContentLoaded",()=>{
   els.modal.classList.add("hidden");
   els.loader.classList.add("hidden");
